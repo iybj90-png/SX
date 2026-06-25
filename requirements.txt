@@ -1,2 +1,5 @@
 pytest
 scikit-learn
+fastapi
+uvicorn
+streamlit

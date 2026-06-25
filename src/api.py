@@ -1,7 +1,10 @@
 """FastAPI judgment endpoint: one process cycle in, control+quality decision out."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .pid_controller import run_control
@@ -11,6 +14,7 @@ from .uvvis_validator import evaluate_uvvis
 from .xrf_validator import evaluate_xrf
 
 app = FastAPI(title="pH/XRF/UV-Vis Quality Judgment API")
+app.mount("/ui", StaticFiles(directory=Path(__file__).resolve().parent.parent / "static", html=True), name="ui")
 
 
 class CycleRequest(BaseModel):

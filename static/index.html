@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>pH / XRF / UV-Vis 실시간 모니터링</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #94a3b8; margin-bottom: 20px; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card { background: #1e293b; border-radius: 10px; padding: 16px 18px; border: 1px solid #334155; }
+  .card h2 { font-size: 13px; color: #94a3b8; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .05em; }
+  .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+  .row span:first-child { color: #94a3b8; }
+  .value { font-weight: 600; }
+  .status { font-size: 28px; font-weight: 700; text-align: center; padding: 14px; border-radius: 10px; margin-bottom: 16px; }
+  .PASS { background: #064e3b; color: #34d399; }
+  .HOLD { background: #78350f; color: #fbbf24; }
+  .FAIL { background: #7f1d1d; color: #f87171; }
+  .flag-PASS { color: #34d399; }
+  .flag-HOLD { color: #fbbf24; }
+  .flag-FAIL, .flag-INVALID { color: #f87171; }
+  .flag-WAIT { color: #94a3b8; }
+  .ts { color: #64748b; font-size: 12px; margin-top: 6px; text-align: right; }
+</style>
+</head>
+<body>
+  <h1>pH / XRF / UV-Vis 실시간 공정 모니터링</h1>
+  <div class="sub">1초마다 /quality-check 자동 호출 (센서값은 데모용으로 무작위 변동)</div>
+
+  <div id="status" class="status PASS">PASS</div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>제어 출력</h2>
+      <div class="row"><span>PID_Output</span><span class="value" id="pid_output">-</span></div>
+      <div class="row"><span>Flow_CMD_Final</span><span class="value" id="flow">-</span></div>
+      <div class="row"><span>Pump_CMD</span><span class="value" id="pump">-</span></div>
+      <div class="row"><span>Valve_CMD</span><span class="value" id="valve">-</span></div>
+      <div class="row"><span>PID_Mode</span><span class="value" id="mode">-</span></div>
+    </div>
+
+    <div class="card">
+      <h2>입력값 (시뮬레이션)</h2>
+      <div class="row"><span>pH_PV</span><span class="value" id="ph_pv">-</span></div>
+      <div class="row"><span>Element_Fe</span><span class="value" id="fe">-</span></div>
+      <div class="row"><span>Element_Cu</span><span class="value" id="cu">-</span></div>
+      <div class="row"><span>Element_Ni</span><span class="value" id="ni">-</span></div>
+      <div class="row"><span>Absorbance</span><span class="value" id="absorbance">-</span></div>
+    </div>
+
+    <div class="card">
+      <h2>품질 판정</h2>
+      <div class="row"><span>pH_Flag</span><span class="value" id="ph_flag">-</span></div>
+      <div class="row"><span>XRF_Flag</span><span class="value" id="xrf_flag">-</span></div>
+      <div class="row"><span>UVVIS_Flag</span><span class="value" id="uvvis_flag">-</span></div>
+      <div class="row"><span>Transfer_To_Next_Process</span><span class="value" id="transfer">-</span></div>
+      <div class="ts" id="ts">-</div>
+    </div>
+  </div>
+
+<script>
+function randIn(min, max) { return Math.random() * (max - min) + min; }
+
+async function tick() {
+  // demo sensor simulation: occasionally drift out of spec to show FAIL/HOLD
+  const anomalyRoll = Math.random();
+  const payload = anomalyRoll < 0.8 ? {
+    ph_pv: randIn(6.9, 7.1),
+    elements: { Fe: randIn(80, 145), Cu: randIn(2, 18), Ni: randIn(15, 48) },
+    absorbance: randIn(0.4, 1.1),
+  } : {
+    ph_pv: randIn(6.9, 7.1),
+    elements: { Fe: randIn(160, 220), Cu: randIn(2, 18), Ni: randIn(15, 48) },
+    absorbance: randIn(0.4, 1.1),
+  };
+
+  const res = await fetch("/quality-check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+
+  document.getElementById("pid_output").innerText = data.PID_Output + "%";
+  document.getElementById("flow").innerText = data.Flow_CMD_Final + "%";
+  document.getElementById("pump").innerText = data.Pump_CMD;
+  document.getElementById("valve").innerText = data.Valve_CMD;
+  document.getElementById("mode").innerText = data.PID_Mode;
+
+  document.getElementById("ph_pv").innerText = payload.ph_pv.toFixed(2);
+  document.getElementById("fe").innerText = payload.elements.Fe.toFixed(1) + " mg/L";
+  document.getElementById("cu").innerText = payload.elements.Cu.toFixed(1) + " mg/L";
+  document.getElementById("ni").innerText = payload.elements.Ni.toFixed(1) + " mg/L";
+  document.getElementById("absorbance").innerText = payload.absorbance.toFixed(2);
+
+  for (const [key, id] of [["pH_Flag","ph_flag"],["XRF_Flag","xrf_flag"],["UVVIS_Flag","uvvis_flag"]]) {
+    const el = document.getElementById(id);
+    el.innerText = data[key];
+    el.className = "value flag-" + data[key];
+  }
+  document.getElementById("transfer").innerText = data.Transfer_To_Next_Process;
+
+  const statusEl = document.getElementById("status");
+  statusEl.innerText = data.Quality_Status;
+  statusEl.className = "status " + data.Quality_Status;
+
+  document.getElementById("ts").innerText = new Date().toLocaleTimeString("ko-KR");
+}
+
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

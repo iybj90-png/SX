@@ -1,0 +1,13 @@
+pid:
+  mode: gain_scheduling_pid_feedforward
+xrf_quality_model:
+  type: rule_based
+  upgrade_path: xgboost
+uvvis_quality_model:
+  type: rule_based
+  upgrade_path: xgboost
+anomaly_detection:
+  type: isolation_forest
+  contamination: 0.05
+final_quality_decision:
+  type: rule_based_state_machine

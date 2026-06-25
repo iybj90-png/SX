@@ -1,0 +1,23 @@
+ph:
+  sp: 7.0
+  deadband: 0.05
+  normal_low: 6.8
+  normal_high: 7.2
+  limit_low: 6.5
+  limit_high: 8.5
+output:
+  min: 0.0
+  max: 100.0
+  normal_min: 10.0
+  normal_max: 90.0
+  max_rate_per_cycle: 4.0
+xrf_element_limits_mg_per_L:
+  Fe: 150.0
+  Cu: 20.0
+  Ni: 50.0
+  Co: 10.0
+  Mn: 30.0
+uvvis:
+  allowed_wavelengths_nm: [520]
+  absorbance_min: 0.0
+  absorbance_max: 1.5
